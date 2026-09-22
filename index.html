@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<title>Meu Painel</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#502D55">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <b>Meu Painel</b>
+        <span>Violet Dusk</span>
+      </div>
+    </div>
+
+    <nav class="nav" id="navList"></nav>
+
+    <div class="sidebar-foot">
+      <div class="mini-profile" onclick="go('config')">
+        <div class="avatar" id="sideAvatar">U</div>
+        <div class="who">
+          <b id="sideName">Usuário</b>
+          <span>Ver configurações</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Início</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="icon-btn" onclick="toggleTheme()" title="Tema" id="themeBtn"></button>
+
+      <button class="icon-btn" onclick="toggleNotif()" title="Notificações" id="notifBtn"></button>
+    </div>
+
+    <div class="content">
+      <div id="views"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- NOTIFICAÇÕES -->
+<div class="notif-panel" id="notifPanel">
+  <div class="h">Notificações</div>
+  <div class="list" id="notifList"></div>
+</div>
+
+<!-- NAVEGAÇÃO MOBILE -->
+<nav class="bottomnav">
+  <div class="row" id="bottomNavRow"></div>
+</nav>
+
+<!-- BOTÃO FLUTUANTE -->
+<button class="fab" id="fabBtn"></button>
+
+<!-- TOASTS -->
+<div id="toastwrap"></div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script src="script.js"></script>
+
+<!-- SERVICE WORKER / PWA -->
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js")
+      .then(() => console.log("Service Worker ativado"))
+      .catch(error => console.error("Erro:", error));
+  }
+</script>
+
+</body>
+</html>
