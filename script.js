@@ -1,5 +1,5 @@
 /* ============================================================
-   MEU PAINEL — app pessoal (localStorage), tema Violet Dusk
+   ROTINERS — app pessoal (localStorage), identidade preto/roxo/magenta
    ============================================================ */
 
 /* ---------- ICONES (SVG inline, estilo linha minimalista) ---------- */
@@ -44,7 +44,16 @@ const ICONS = {
   pin:'<path d="M12 21s7-6.3 7-12A7 7 0 0 0 5 9c0 5.7 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>',
   repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
-  bank:'<path d="M3 21h18"/><path d="M4 21V10M8 21V10M12.5 21V10M17 21V10M21 21V10"/><path d="m3 10 9-6.5L21 10Z"/>'
+  bank:'<path d="M3 21h18"/><path d="M4 21V10M8 21V10M12.5 21V10M17 21V10M21 21V10"/><path d="m3 10 9-6.5L21 10Z"/>',
+  home2:'<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/>',
+  calc:'<rect x="4" y="2.5" width="16" height="19" rx="2.3"/><path d="M7.5 6.5h9M7.5 11h1.4M11.4 11h1.4M15.3 11h1.4M7.5 14.5h1.4M11.4 14.5h1.4M15.3 14.5v4M7.5 18h1.4M11.4 18h1.4"/>',
+  ruler:'<path d="m3.5 9.5 11-7 6 9.5-11 7Z"/><path d="m9.5 6.8 1.2 1.9M12.6 4.9l1.2 1.9M14.7 12.8l1.2 1.9M17.8 10.9l1.2 1.9"/>',
+  swap:'<path d="M4 8h13M13 4l4 4-4 4"/><path d="M20 16H7M11 12l-4 4 4 4"/>',
+  timer:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2.5h5"/>',
+  note:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+  grid9:'<rect x="3.5" y="3.5" width="5" height="5" rx="1"/><rect x="9.5" y="3.5" width="5" height="5" rx="1"/><rect x="15.5" y="3.5" width="5" height="5" rx="1"/><rect x="3.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="15.5" y="9.5" width="5" height="5" rx="1"/><rect x="3.5" y="15.5" width="5" height="5" rx="1"/><rect x="9.5" y="15.5" width="5" height="5" rx="1"/><rect x="15.5" y="15.5" width="5" height="5" rx="1"/>',
+  type:'<path d="M5 5h14M12 5v14M9 19h6"/>',
+  camera:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.4"/>'
 };
 function icon(name, cls){
   return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;
@@ -52,26 +61,34 @@ function icon(name, cls){
 document.querySelector('.brand .mark').innerHTML = icon('logo');
 
 /* ---------- DATA LAYER ---------- */
-const DB_KEY = 'meuPainel_v1';
+const DB_KEY = 'rotiners_v1';
+const LEGACY_DB_KEY = 'meuPainel_v1';
 const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 function defaultData(){
   return {
-    settings:{ name:'Usuário', photo:'', theme:'dark', currency:'BRL', notifDays:3 },
-    transactions:[], // {id,type:'entrada'|'saida', desc, value, category, date, method, paid}
+    settings:{ name:'Usuário', photo:'', theme:'dark', currency:'BRL', notifDays:3, notifOn:true },
+    transactions:[], // {id,type:'entrada'|'saida', desc, value, category, date, method}
     fixedExpenses:[], // {id, desc, value, dueDay, paid, category}
-    jobs:[], // {id, name, client, value, received, date, deadline, status, notes}
+    jobs:[], // {id, name, client, location, value, received, date, deadline, status, notes, photos:[{id,phase,src}]}
     subjects:[], // {id, name, grades:[{label,value}], activities:[{id,title,type,due,done}], absences}
     tasks:[], // {id,title,desc,category,priority,date,time,deadline,status,done}
     routine:[], // {id,time,activity,category,duration,days:[0..6]}
     goals:[], // {id,name,desc,category,target,current,unit,deadline}
-    events:[] // manual calendar events {id,title,date,time,type}
+    events:[], // manual calendar events {id,title,date,time,type,category,reminder,notes}
+    notifState:{ read:[], deleted:[] }, // ids de notificações computadas, marcadas como lidas/excluídas
+    notes:'' // bloco de notas da escola
   };
 }
 let DATA = loadData();
 function loadData(){
   try{
-    const raw = localStorage.getItem(DB_KEY);
+    let raw = localStorage.getItem(DB_KEY);
+    if(!raw){
+      // migra dados do antigo "Meu Painel", se existirem
+      const legacy = localStorage.getItem(LEGACY_DB_KEY);
+      if(legacy) raw = legacy;
+    }
     if(!raw) return defaultData();
     const parsed = JSON.parse(raw);
     return Object.assign(defaultData(), parsed);
@@ -85,16 +102,33 @@ function saveData(){
 /* ---------- HELPERS ---------- */
 const CATS = [
   {id:'alimentacao', label:'Alimentação', icon:'food'},
-  {id:'transporte', label:'Transporte', icon:'car'},
   {id:'lazer', label:'Lazer', icon:'gamepad'},
+  {id:'roupas', label:'Roupas', icon:'cart'},
+  {id:'transporte', label:'Transporte', icon:'car'},
+  {id:'casa', label:'Casa', icon:'home2'},
   {id:'escola', label:'Escola', icon:'school'},
   {id:'trabalho', label:'Trabalho', icon:'work2'},
-  {id:'compras', label:'Compras', icon:'cart'},
   {id:'outros', label:'Outros', icon:'more'},
 ];
-const CAT_COLORS = ['#935073','#e3b567','#7fbf9e','#e07a6b','#c48bd9','#6fa8dc','#F6DBC0'];
+const CAT_COLORS = ['#E736B0','#8B2FD9','#f0954a','#5fa8e3','#5fe3a8','#f0b84f','#c24bff','#ff8fe0'];
 function catInfo(id){ return CATS.find(c=>c.id===id) || CATS[CATS.length-1]; }
-function catColor(id){ const i = CATS.findIndex(c=>c.id===id); return CAT_COLORS[i<0?6:i]; }
+function catColor(id){ const i = CATS.findIndex(c=>c.id===id); return CAT_COLORS[i<0?7:i]; }
+
+const TASK_CATS = [
+  {id:'escola', label:'Escola'},
+  {id:'trabalho', label:'Trabalho'},
+  {id:'diaadia', label:'Dia a dia'},
+  {id:'outras', label:'Outras'},
+];
+function taskCatLabel(id){ const c = TASK_CATS.find(x=>x.id===id); return c? c.label : (id||'Outras'); }
+
+const PRIORITIES = [
+  {id:'urgente', label:'Urgente', emoji:'🔴', order:0},
+  {id:'alta', label:'Alta prioridade', emoji:'🟠', order:1},
+  {id:'media', label:'Média prioridade', emoji:'🟡', order:2},
+  {id:'baixa', label:'Baixa prioridade', emoji:'🟢', order:3},
+];
+function prioInfo(id){ return PRIORITIES.find(p=>p.id===id) || PRIORITIES[2]; }
 
 function fmtMoney(v){
   const n = Number(v)||0;
@@ -125,6 +159,22 @@ function toast(msg, type){
   el.innerHTML = icon(type==='err'?'x':'check') + '<span>'+msg+'</span>';
   document.getElementById('toastwrap').appendChild(el);
   setTimeout(()=>{ el.style.transition='opacity .25s'; el.style.opacity='0'; setTimeout(()=>el.remove(),250); }, 2600);
+}
+
+/* Animação de contagem para números do dashboard */
+function countUp(el, to, isMoney){
+  if(!el) return;
+  const from = 0;
+  const dur = 700;
+  const t0 = performance.now();
+  function step(t){
+    const p = Math.min(1, (t-t0)/dur);
+    const eased = 1 - Math.pow(1-p, 3);
+    const val = from + (to-from)*eased;
+    el.textContent = isMoney ? fmtMoney(val) : Math.round(val);
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 /* ---------- CONFIRM DIALOG ---------- */
@@ -198,7 +248,7 @@ function subtitleFor(id){
     inicio: dateStr,
     dinheiro:'Controle financeiro pessoal',
     trabalho:'Serviços e clientes',
-    escola:'Matérias e desempenho',
+    escola:'Matérias, notas e ferramentas',
     tarefas:'O que precisa ser feito',
     rotina:'Sua linha do tempo diária',
     calendario:'Tudo em um só lugar',
@@ -240,6 +290,12 @@ function renderView(id){
 }
 
 /* ================= INÍCIO ================= */
+function greetingWord(){
+  const h = new Date().getHours();
+  if(h<12) return 'Bom dia';
+  if(h<18) return 'Boa tarde';
+  return 'Boa noite';
+}
 function renderInicio(){
   const el = document.getElementById('view-inicio');
   const bal = balance();
@@ -250,8 +306,8 @@ function renderInicio(){
   el.innerHTML = `
     <div class="hero">
       <div class="greet">
-        <h2>Olá, ${escapeHtml(DATA.settings.name||'Usuário')} 👋</h2>
-        <p>Aqui está o resumo da sua vida hoje.</p>
+        <h2>${greetingWord()}, ${escapeHtml(DATA.settings.name||'Usuário')} 👋</h2>
+        <p>Aqui está o resumo da sua rotina.</p>
       </div>
       <div class="clock">
         <div class="time" id="liveClock">--:--</div>
@@ -266,29 +322,54 @@ function renderInicio(){
     </div>` : ''}
 
     <div class="grid grid-4">
-      ${statCard('wallet','Saldo disponível', fmtMoney(bal), null)}
-      ${statCard('arrowUp','Entradas do mês', fmtMoney(entradas), null)}
-      ${statCard('arrowDown','Gastos do mês', fmtMoney(saidas), null)}
-      ${statCard('check','Tarefas pendentes', pendTasks.length, null)}
+      ${statCard('wallet','Saldo disponível', bal, null, true, 'cuSaldo')}
+      ${statCard('arrowUp','Entradas do mês', entradas, null, true, 'cuEntradas')}
+      ${statCard('arrowDown','Gastos do mês', saidas, null, true, 'cuGastos')}
+      ${statCard('check','Tarefas pendentes', pendTasks.length, null, false, 'cuTarefas')}
+    </div>
+
+    <div class="section-title">Tarefas pendentes</div>
+    <div class="section-toolbar">
+      <div class="chip-row" id="inicioTaskChips">
+        ${[['todas','Todas'],['escola','Escola'],['trabalho','Trabalho'],['diaadia','Dia a dia'],['outras','Outras']].map(([k,l])=>`<div class="chip ${inicioTaskCat===k?'active':''}" onclick="setInicioTaskCat('${k}')">${l}</div>`).join('')}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:22px;">
+      ${listOrEmpty(inicioPendingTasks(), taskRow, 'check','Nenhuma tarefa pendente')}
     </div>
 
     <div class="section-title">Panorama</div>
     <div class="grid grid-2">
       <div class="card">
+        <h3>Tarefas por categoria</h3>
+        ${taskDonut()}
+      </div>
+      <div class="card">
+        <h3>Dinheiro por categoria</h3>
+        ${donutChart(monthCatTotals())}
+      </div>
+    </div>
+
+    <div class="section-title">Resumo financeiro</div>
+    <div class="card">
+      <div class="section-toolbar" style="margin-bottom:10px;">
+        <div class="spacer"></div>
+        <select class="select" style="width:auto" onchange="finResumoRange=this.value;renderInicio()">
+          <option value="mes" ${finResumoRange==='mes'?'selected':''}>Últimos meses</option>
+          <option value="ano" ${finResumoRange==='ano'?'selected':''}>Este ano</option>
+        </select>
+      </div>
+      ${finResumoChart()}
+    </div>
+
+    <div class="grid grid-2" style="margin-top:18px;">
+      <div class="card">
         <div class="card-head"><h3>Próximos compromissos</h3><span class="link" onclick="go('calendario')">Ver tudo ${icon('chevron')}</span></div>
         ${listOrEmpty(upcomingEvents(4), ev=>rowGeneric(ev.icon, ev.title, ev.when, null), 'calendar','Nenhum compromisso agendado')}
       </div>
       <div class="card">
-        <div class="card-head"><h3>Atividades da escola</h3><span class="link" onclick="go('escola')">Ver tudo ${icon('chevron')}</span></div>
-        ${listOrEmpty(upcomingSchool(4), a=>rowGeneric('school', a.title, fmtDate(a.due), null), 'book','Nenhuma atividade próxima')}
-      </div>
-      <div class="card">
         <div class="card-head"><h3>Trabalhos pendentes</h3><span class="link" onclick="go('trabalho')">Ver tudo ${icon('chevron')}</span></div>
         ${listOrEmpty(DATA.jobs.filter(j=>j.status!=='Concluído'&&j.status!=='Cancelado').slice(0,4), j=>rowGeneric('briefcase', j.name, j.client, fmtMoney(j.value-(+j.received||0))+' a receber'), 'briefcase','Nenhum trabalho pendente')}
-      </div>
-      <div class="card">
-        <div class="card-head"><h3>Rotina de hoje</h3><span class="link" onclick="go('rotina')">Ver tudo ${icon('chevron')}</span></div>
-        ${renderTodayTimeline(true)}
       </div>
     </div>
 
@@ -298,12 +379,26 @@ function renderInicio(){
     </div>
   `;
   startClock();
+  countUp(document.getElementById('cuSaldo'), bal, true);
+  countUp(document.getElementById('cuEntradas'), entradas, true);
+  countUp(document.getElementById('cuGastos'), saidas, true);
+  countUp(document.getElementById('cuTarefas'), pendTasks.length, false);
 }
-function statCard(ic,label,value,delta){
+let inicioTaskCat = 'todas';
+function setInicioTaskCat(c){ inicioTaskCat=c; renderInicio(); }
+function inicioPendingTasks(){
+  let list = DATA.tasks.filter(t=>!t.done);
+  if(inicioTaskCat!=='todas') list = list.filter(t=>t.category===inicioTaskCat);
+  const order = {urgente:0,alta:1,media:2,baixa:3};
+  list.sort((a,b)=> (order[a.priority]??2)-(order[b.priority]??2));
+  return list.slice(0,6);
+}
+let finResumoRange = 'mes';
+function statCard(ic,label,value,delta,isMoney,cuId){
   return `<div class="card stat">
     <div class="top"><div class="ic">${icon(ic)}</div></div>
     <div class="label">${label}</div>
-    <div class="value">${value}</div>
+    <div class="value" id="${cuId||''}">${isMoney?fmtMoney(value):value}</div>
   </div>`;
 }
 function rowGeneric(ic,title,sub,end){
@@ -347,6 +442,61 @@ function upcomingSchool(limit){
   DATA.subjects.forEach(s=> (s.activities||[]).forEach(a=>{ if(!a.done) list.push({title:a.title+' · '+s.name, due:a.due||''}); }));
   return list.filter(a=>a.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,limit||10);
 }
+function taskDonut(){
+  const totals = {};
+  DATA.tasks.forEach(t=>{ const c = t.category||'outras'; totals[c]=(totals[c]||0)+1; });
+  const entries = Object.entries(totals);
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  if(!total) return `<div class="empty">${icon('check')}<p>Nenhuma tarefa cadastrada</p></div>`;
+  const colors = {escola:'#8B2FD9', trabalho:'#E736B0', diaadia:'#f0b84f', outras:'#5fe3a8'};
+  let acc=0; const r=15.9155, cx=21,cy=21;
+  const segs = entries.map(([cat,v])=>{
+    const pct = v/total*100; const dash = `${pct} ${100-pct}`; const offset = 25-acc; acc+=pct;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="transparent" stroke="${colors[cat]||'#c24bff'}" stroke-width="6" stroke-dasharray="${dash}" stroke-dashoffset="${offset}"></circle>`;
+  }).join('');
+  const legend = entries.map(([cat,v])=>`<div class="li"><span class="sw" style="background:${colors[cat]||'#c24bff'}"></span>${taskCatLabel(cat)} · ${v}</div>`).join('');
+  return `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+    <svg viewBox="0 0 42 42" style="width:130px;height:130px;flex:none;transform:rotate(-90deg)">${segs}
+      <text x="21" y="21" transform="rotate(90 21 21)" text-anchor="middle" dominant-baseline="middle" font-size="7" fill="var(--text-1)" font-weight="700">${total}</text>
+    </svg>
+    <div class="legend" style="margin-top:0;flex:1;min-width:140px;">${legend}</div>
+  </div>`;
+}
+function monthCatTotals(){
+  const mk = currentMonthKey(); const catTotals = {};
+  DATA.transactions.filter(t=>t.type==='saida' && monthKey(t.date)===mk).forEach(t=> catTotals[t.category]=(catTotals[t.category]||0)+ (+t.value));
+  return catTotals;
+}
+function finResumoChart(){
+  const pts = [];
+  if(finResumoRange==='ano'){
+    const y = new Date().getFullYear();
+    for(let m=0;m<12;m++){
+      const mk2 = y+'-'+String(m+1).padStart(2,'0');
+      const f = monthFlow(mk2);
+      pts.push({label:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m], entradas:f.entradas, saidas:f.saidas});
+    }
+  } else {
+    for(let i=5;i>=0;i--){
+      const d = new Date(); d.setMonth(d.getMonth()-i);
+      const mk2 = d.toISOString().slice(0,7);
+      const f = monthFlow(mk2);
+      pts.push({label:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()], entradas:f.entradas, saidas:f.saidas});
+    }
+  }
+  const max = Math.max(...pts.map(p=>Math.max(p.entradas,p.saidas)),1);
+  return `<div class="scrollx"><div style="min-width:${pts.length*70}px;display:flex;align-items:end;gap:14px;height:170px;padding-top:10px;">
+    ${pts.map(p=>`
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;">
+        <div style="display:flex;gap:3px;align-items:end;height:100%;">
+          <div style="width:14px;height:${Math.max(4,p.entradas/max*100)}%;background:#5fe3a8;border-radius:5px 5px 2px 2px;" title="Ganhos: ${fmtMoney(p.entradas)}"></div>
+          <div style="width:14px;height:${Math.max(4,p.saidas/max*100)}%;background:#ff6b81;border-radius:5px 5px 2px 2px;" title="Gastos: ${fmtMoney(p.saidas)}"></div>
+        </div>
+        <div class="tiny">${p.label}</div>
+      </div>`).join('')}
+  </div></div>
+  <div class="legend"><div class="li"><span class="sw" style="background:#5fe3a8"></span>Ganhos</div><div class="li"><span class="sw" style="background:#ff6b81"></span>Gastos</div></div>`;
+}
 
 /* ================= DINHEIRO ================= */
 let dinheiroFilterCat = 'todas';
@@ -365,18 +515,16 @@ function renderDinheiro(){
   const bal = balance();
   const unpaid = DATA.fixedExpenses.filter(f=>!f.paid);
   const paid = DATA.fixedExpenses.filter(f=>f.paid);
-
-  const catTotals = {};
-  DATA.transactions.filter(t=>t.type==='saida' && monthKey(t.date)===mk).forEach(t=> catTotals[t.category]=(catTotals[t.category]||0)+ (+t.value));
+  const catTotals = monthCatTotals();
 
   let txList = DATA.transactions.slice().sort((a,b)=> b.date.localeCompare(a.date));
   if(dinheiroFilterCat!=='todas') txList = txList.filter(t=>t.category===dinheiroFilterCat);
 
   el.innerHTML = `
     <div class="grid grid-4">
-      ${statCard('wallet','Saldo atual', fmtMoney(bal))}
-      ${statCard('arrowUp','Entradas do mês', fmtMoney(entradas))}
-      ${statCard('arrowDown','Saídas do mês', fmtMoney(saidas))}
+      ${statCard('wallet','Saldo atual', bal, null, true)}
+      ${statCard('arrowUp','Entradas do mês', entradas, null, true)}
+      ${statCard('arrowDown','Saídas do mês', saidas, null, true)}
       ${statCard('bank','Contas a pagar', unpaid.length)}
     </div>
 
@@ -388,7 +536,7 @@ function renderDinheiro(){
       </div>
       <div class="card">
         <h3>Entradas x saídas (mês)</h3>
-        ${barsSimple([{label:'Entradas',value:entradas,color:'#7fbf9e'},{label:'Saídas',value:saidas,color:'#e07a6b'}])}
+        ${barsSimple([{label:'Entradas',value:entradas,color:'#5fe3a8'},{label:'Saídas',value:saidas,color:'#ff6b81'}])}
       </div>
     </div>
 
@@ -422,7 +570,10 @@ function renderDinheiro(){
           <div class="lead-ic">${icon(catInfo(t.category).icon)}</div>
           <div class="body"><div class="t1">${escapeHtml(t.desc)}</div><div class="t2">${fmtDate(t.date)} · ${catInfo(t.category).label} · ${escapeHtml(t.method||'')}</div></div>
           <div class="end"><div class="amt" style="color:${t.type==='entrada'?'var(--success)':'var(--danger)'}">${t.type==='entrada'?'+':'-'} ${fmtMoney(t.value)}</div></div>
-          <div class="actions"><button class="icon-btn btn-sm" onclick="deleteTx('${t.id}')">${icon('trash')}</button></div>
+          <div class="actions">
+            <button class="icon-btn btn-sm" onclick="openTxForm('${t.id}')">${icon('edit')}</button>
+            <button class="icon-btn btn-sm" onclick="deleteTx('${t.id}')">${icon('trash')}</button>
+          </div>
         </div>`, 'wallet', 'Nenhuma movimentação registrada')}
     </div>
   `;
@@ -432,40 +583,44 @@ function deleteTx(id){ confirmDialog('Excluir esta movimentação?', ()=>{ DATA.
 function toggleFixedPaid(id){ const f = DATA.fixedExpenses.find(x=>x.id===id); f.paid=!f.paid; saveData(); renderDinheiro(); }
 function deleteFixed(id){ confirmDialog('Excluir esta conta fixa?', ()=>{ DATA.fixedExpenses = DATA.fixedExpenses.filter(x=>x.id!==id); saveData(); renderDinheiro(); }); }
 
-function openTxForm(){
+function openTxForm(id){
+  const t = id? DATA.transactions.find(x=>x.id===id): null;
   openModal(`
-    <div class="modal-head"><h3>Nova movimentação</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="modal-head"><h3>${t?'Editar':'Nova'} movimentação</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
     <div class="field-row" style="margin-bottom:12px;">
       <div class="chip" id="typeEntrada" onclick="pickTxType('entrada')" style="text-align:center;">Entrada</div>
       <div class="chip" id="typeSaida" onclick="pickTxType('saida')" style="text-align:center;">Saída</div>
     </div>
-    <div class="field"><label>Descrição</label><input class="input" id="txDesc" placeholder="Ex: Freelance, mercado..."></div>
+    <div class="field"><label>Descrição</label><input class="input" id="txDesc" value="${t?escapeHtml(t.desc):''}" placeholder="Ex: Freelance, mercado..."></div>
     <div class="field-row">
-      <div class="field"><label>Valor</label><input class="input" id="txValue" type="number" step="0.01" placeholder="0,00"></div>
-      <div class="field"><label>Data</label><input class="input" id="txDate" type="date" value="${todayISO()}"></div>
+      <div class="field"><label>Valor</label><input class="input" id="txValue" type="number" step="0.01" value="${t?t.value:''}" placeholder="0,00"></div>
+      <div class="field"><label>Data</label><input class="input" id="txDate" type="date" value="${t?t.date:todayISO()}"></div>
     </div>
+    <div class="field"><label>Horário</label><input class="input" id="txTime" type="time" value="${t?t.time||'':''}"></div>
     <div class="field"><label>Categoria</label>
-      <select class="select" id="txCat">${CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+      <select class="select" id="txCat">${CATS.map(c=>`<option value="${c.id}" ${t&&t.category===c.id?'selected':''}>${c.label}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Forma de pagamento</label>
-      <select class="select" id="txMethod"><option>Pix</option><option>Dinheiro</option><option>Cartão de crédito</option><option>Cartão de débito</option><option>Transferência</option></select>
+      <select class="select" id="txMethod">${['Pix','Dinheiro','Cartão de crédito','Cartão de débito','Transferência'].map(m=>`<option ${t&&t.method===m?'selected':''}>${m}</option>`).join('')}</select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveTx()">Salvar</button>
+      <button class="btn btn-primary" onclick="saveTx(${t?`'${t.id}'`:'null'})">Finalizar</button>
     </div>
   `);
-  pickTxType('entrada');
+  pickTxType(t?t.type:'entrada');
 }
 let _txType='entrada';
 function pickTxType(t){ _txType=t; document.getElementById('typeEntrada').classList.toggle('active', t==='entrada'); document.getElementById('typeSaida').classList.toggle('active', t==='saida'); }
-function saveTx(){
+function saveTx(id){
   const desc = document.getElementById('txDesc').value.trim();
   const value = parseFloat(document.getElementById('txValue').value);
   const date = document.getElementById('txDate').value || todayISO();
   if(!desc || !value){ toast('Preencha descrição e valor','err'); return; }
-  DATA.transactions.push({id:uid(), type:_txType, desc, value, date, category:document.getElementById('txCat').value, method:document.getElementById('txMethod').value});
-  saveData(); closeModal(); toast('Movimentação adicionada'); renderDinheiro(); renderInicio();
+  const obj = {type:_txType, desc, value, date, time:document.getElementById('txTime').value, category:document.getElementById('txCat').value, method:document.getElementById('txMethod').value};
+  if(id){ Object.assign(DATA.transactions.find(t=>t.id===id), obj); }
+  else DATA.transactions.push({id:uid(), ...obj});
+  saveData(); closeModal(); toast('Movimentação salva'); renderDinheiro(); renderInicio();
 }
 function openFixedForm(){
   openModal(`
@@ -478,7 +633,7 @@ function openFixedForm(){
     <div class="field"><label>Categoria</label><select class="select" id="fxCat">${CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveFixed()">Salvar</button>
+      <button class="btn btn-primary" onclick="saveFixed()">Finalizar</button>
     </div>`);
 }
 function saveFixed(){
@@ -504,7 +659,9 @@ function donutChart(totalsObj){
   }).join('');
   const legend = entries.sort((a,b)=>b[1]-a[1]).map(([cat,v])=>`<div class="li"><span class="sw" style="background:${catColor(cat)}"></span>${catInfo(cat).label} · ${fmtMoney(v)}</div>`).join('');
   return `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
-    <svg viewBox="0 0 42 42" style="width:130px;height:130px;flex:none;transform:rotate(-90deg)">${segs}</svg>
+    <svg viewBox="0 0 42 42" style="width:130px;height:130px;flex:none;transform:rotate(-90deg)">${segs}
+      <text x="21" y="21" transform="rotate(90 21 21)" text-anchor="middle" dominant-baseline="middle" font-size="5.6" fill="var(--text-1)" font-weight="700">${fmtMoney(total)}</text>
+    </svg>
     <div class="legend" style="margin-top:0;flex:1;min-width:140px;">${legend}</div>
   </div>`;
 }
@@ -551,19 +708,20 @@ function renderTrabalho(){
   const concluidos = DATA.jobs.filter(j=>j.status==='Concluído').length;
   const andamento = DATA.jobs.filter(j=>j.status==='Em andamento').length;
 
-  let list = DATA.jobs.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
-  if(jobFilter!=='todos') list = list.filter(j=>j.status===jobFilter);
+  let list = DATA.jobs.slice().sort((a,b)=> (a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  if(jobFilter==='entregas') list = list.filter(j=>j.deadline && daysUntil(j.deadline)>=0 && daysUntil(j.deadline)<=7 && j.status!=='Concluído');
+  else if(jobFilter!=='todos') list = list.filter(j=>j.status===jobFilter);
 
   el.innerHTML = `
     <div class="grid grid-4">
-      ${statCard('dollar','Total recebido', fmtMoney(totalRecebido))}
-      ${statCard('wallet','Total pendente', fmtMoney(totalPendente))}
+      ${statCard('dollar','Total recebido', totalRecebido, null, true)}
+      ${statCard('wallet','Total pendente', totalPendente, null, true)}
       ${statCard('check','Concluídos', concluidos)}
       ${statCard('clock','Em andamento', andamento)}
     </div>
     <div class="section-toolbar">
       <div class="chip-row">
-        ${['todos','Pendente','Em andamento','Concluído','Cancelado'].map(s=>`<div class="chip ${jobFilter===s?'active':''}" onclick="setJobFilter('${s}')">${s==='todos'?'Todos':s}</div>`).join('')}
+        ${[['todos','Todos'],['A fazer','A fazer'],['Em andamento','Em andamento'],['Concluído','Concluídos'],['entregas','Entregas próximas']].map(([k,l])=>`<div class="chip ${jobFilter===k?'active':''}" onclick="setJobFilter('${k}')">${l}</div>`).join('')}
       </div>
     </div>
     <div class="grid grid-2">
@@ -574,19 +732,20 @@ function renderTrabalho(){
 function setJobFilter(s){ jobFilter=s; renderTrabalho(); }
 function jobCardHtml(j){
   const pend = Math.max((+j.value||0)-(+j.received||0),0);
-  const pillClass = {Pendente:'pill-pendente','Em andamento':'pill-andamento',Concluído:'pill-concluido',Cancelado:'pill-cancelado'}[j.status]||'pill-pendente';
+  const pillClass = {'A fazer':'pill-pendente','Em andamento':'pill-andamento',Concluído:'pill-concluido',Cancelado:'pill-cancelado'}[j.status]||'pill-pendente';
   return `<div class="card">
     <div class="card-head">
-      <h3>${escapeHtml(j.name)}</h3>
+      <h3 style="cursor:pointer" onclick="openJobDetail('${j.id}')">${escapeHtml(j.name)}</h3>
       <span class="badge-pill ${pillClass}">${j.status}</span>
     </div>
-    <div class="tiny" style="margin-bottom:10px;">Cliente: ${escapeHtml(j.client||'—')}</div>
+    <div class="tiny" style="margin-bottom:10px;">Cliente: ${escapeHtml(j.client||'—')}${j.location?' · '+escapeHtml(j.location):''}</div>
     <div class="grid grid-2" style="margin-bottom:10px;">
       <div><div class="tiny">Valor total</div><div style="font-weight:700;font-family:'Sora'">${fmtMoney(j.value)}</div></div>
       <div><div class="tiny">A receber</div><div style="font-weight:700;font-family:'Sora';color:${pend>0?'var(--warn)':'var(--success)'}">${fmtMoney(pend)}</div></div>
     </div>
-    <div class="tiny" style="margin-bottom:12px;">Prazo: ${j.deadline?fmtDate(j.deadline):'—'} ${j.notes?' · '+escapeHtml(j.notes):''}</div>
+    <div class="tiny" style="margin-bottom:12px;">Prazo: ${j.deadline?fmtDate(j.deadline):'—'}</div>
     <div style="display:flex;gap:8px;">
+      <button class="btn btn-sm btn-ghost" onclick="openJobDetail('${j.id}')">${icon('camera')}Fotos</button>
       <button class="btn btn-sm btn-ghost" onclick="openJobForm('${j.id}')">${icon('edit')}Editar</button>
       <button class="btn btn-sm btn-danger" onclick="deleteJob('${j.id}')">${icon('trash')}</button>
     </div>
@@ -598,32 +757,37 @@ function openJobForm(id){
   openModal(`
     <div class="modal-head"><h3>${j?'Editar':'Novo'} trabalho</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
     <div class="field"><label>Nome do serviço</label><input class="input" id="jbName" value="${j?escapeHtml(j.name):''}"></div>
-    <div class="field"><label>Cliente</label><input class="input" id="jbClient" value="${j?escapeHtml(j.client||''):''}"></div>
+    <div class="field-row">
+      <div class="field"><label>Cliente</label><input class="input" id="jbClient" value="${j?escapeHtml(j.client||''):''}"></div>
+      <div class="field"><label>Localização</label><input class="input" id="jbLocation" value="${j?escapeHtml(j.location||''):''}"></div>
+    </div>
     <div class="field-row">
       <div class="field"><label>Valor total</label><input class="input" id="jbValue" type="number" step="0.01" value="${j?j.value:''}"></div>
       <div class="field"><label>Valor recebido</label><input class="input" id="jbReceived" type="number" step="0.01" value="${j?j.received||0:0}"></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Data</label><input class="input" id="jbDate" type="date" value="${j?j.date||'':todayISO()}"></div>
-      <div class="field"><label>Prazo</label><input class="input" id="jbDeadline" type="date" value="${j?j.deadline||'':''}"></div>
+      <div class="field"><label>Data de início</label><input class="input" id="jbDate" type="date" value="${j?j.date||'':todayISO()}"></div>
+      <div class="field"><label>Data de entrega</label><input class="input" id="jbDeadline" type="date" value="${j?j.deadline||'':''}"></div>
     </div>
     <div class="field"><label>Status</label>
       <select class="select" id="jbStatus">
-        ${['Pendente','Em andamento','Concluído','Cancelado'].map(s=>`<option ${j&&j.status===s?'selected':''}>${s}</option>`).join('')}
+        ${['A fazer','Em andamento','Concluído','Cancelado'].map(s=>`<option ${j&&j.status===s?'selected':''}>${s}</option>`).join('')}
       </select>
     </div>
     <div class="field"><label>Observações</label><textarea class="input" id="jbNotes" rows="2">${j?escapeHtml(j.notes||''):''}</textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveJob(${j?`'${j.id}'`:'null'})">Salvar</button>
+      <button class="btn btn-primary" onclick="saveJob(${j?`'${j.id}'`:'null'})">Finalizar</button>
     </div>
   `);
 }
 function saveJob(id){
   const name = document.getElementById('jbName').value.trim();
   if(!name){ toast('Informe o nome do serviço','err'); return; }
+  const prevStatus = id? DATA.jobs.find(j=>j.id===id).status : null;
   const obj = {
     name, client: document.getElementById('jbClient').value.trim(),
+    location: document.getElementById('jbLocation').value.trim(),
     value: parseFloat(document.getElementById('jbValue').value)||0,
     received: parseFloat(document.getElementById('jbReceived').value)||0,
     date: document.getElementById('jbDate').value,
@@ -631,12 +795,56 @@ function saveJob(id){
     status: document.getElementById('jbStatus').value,
     notes: document.getElementById('jbNotes').value.trim(),
   };
-  if(id){ Object.assign(DATA.jobs.find(j=>j.id===id), obj); }
-  else DATA.jobs.push({id:uid(), ...obj});
-  saveData(); closeModal(); toast('Trabalho salvo'); renderTrabalho(); renderInicio();
+  let job;
+  if(id){ job = DATA.jobs.find(j=>j.id===id); Object.assign(job, obj); }
+  else { job = {id:uid(), photos:[], ...obj}; DATA.jobs.push(job); }
+  // integração financeira: ao concluir e receber, oferece lançar entrada
+  if(obj.status==='Concluído' && prevStatus!=='Concluído' && (+obj.received)>0){
+    DATA.transactions.push({id:uid(), type:'entrada', desc:'Recebimento: '+name, value:+obj.received, date:todayISO(), category:'trabalho', method:'Pix'});
+    toast('Trabalho salvo e entrada registrada em Dinheiro');
+  } else {
+    toast('Trabalho salvo');
+  }
+  saveData(); closeModal(); renderTrabalho(); renderInicio(); renderDinheiro();
+}
+function openJobDetail(id){
+  const j = DATA.jobs.find(x=>x.id===id);
+  if(!j.photos) j.photos=[];
+  openModal(`
+    <div class="modal-head"><h3>${escapeHtml(j.name)}</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="tiny" style="margin-bottom:12px;">Cliente: ${escapeHtml(j.client||'—')}${j.location?' · '+escapeHtml(j.location):''}</div>
+    ${['Antes','Durante','Depois'].map(phase=>`
+      <div class="card-head" style="margin-top:14px;"><h3 style="font-size:13px;">${phase}</h3></div>
+      <div class="gallery-grid">
+        ${j.photos.filter(p=>p.phase===phase).map(p=>`<img src="${p.src}" onclick="event.stopPropagation()">`).join('')}
+        <div class="gallery-add" onclick="document.getElementById('jbPhotoInput_${phase}').click()">${icon('plus')}</div>
+        <input type="file" id="jbPhotoInput_${phase}" accept="image/*" multiple style="display:none" onchange="addJobPhotos('${j.id}','${phase}',event)">
+      </div>
+    `).join('')}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
+    </div>
+  `);
+}
+function addJobPhotos(jid, phase, e){
+  const files = Array.from(e.target.files||[]);
+  const j = DATA.jobs.find(x=>x.id===jid);
+  if(!j.photos) j.photos=[];
+  let pending = files.length;
+  if(!pending) return;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      j.photos.push({id:uid(), phase, src:reader.result});
+      pending--;
+      if(pending===0){ saveData(); openJobDetail(jid); }
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ================= ESCOLA ================= */
+let escolaTab = 'materias';
 function subjAvg(s){
   if(!s.grades || !s.grades.length) return null;
   const sum = s.grades.reduce((a,g)=>a+(+g.value||0),0);
@@ -645,15 +853,44 @@ function subjAvg(s){
 function renderEscola(){
   const el = document.getElementById('view-escola');
   el.innerHTML = `
-    <div class="section-toolbar"><div class="spacer"></div></div>
-    <div class="grid grid-3">
-      ${DATA.subjects.length? DATA.subjects.map(subjectCardHtml).join('') : emptyState('book','Nenhuma matéria cadastrada ainda',"openSubjectForm()",'Adicionar matéria')}
+    <div class="chip-row" style="margin-bottom:18px;">
+      <div class="chip ${escolaTab==='materias'?'active':''}" onclick="setEscolaTab('materias')">Matérias</div>
+      <div class="chip ${escolaTab==='ferramentas'?'active':''}" onclick="setEscolaTab('ferramentas')">Ferramentas</div>
     </div>
-    <div class="section-title">Atividades próximas do prazo</div>
-    <div class="card">
-      ${listOrEmpty(upcomingSchool(8), a=>rowGeneric('school', a.title, fmtDate(a.due), null),'school','Nenhuma atividade próxima')}
-    </div>
+    <div id="escolaBody"></div>
   `;
+  renderEscolaBody();
+}
+function setEscolaTab(t){ escolaTab=t; renderEscolaBody(); }
+function renderEscolaBody(){
+  const el = document.getElementById('escolaBody');
+  if(escolaTab==='materias'){
+    el.innerHTML = `
+      <div class="grid grid-3">
+        ${DATA.subjects.length? DATA.subjects.map(subjectCardHtml).join('') : emptyState('book','Nenhuma matéria cadastrada ainda',"openSubjectForm()",'Adicionar matéria')}
+      </div>
+      <div class="section-title">Atividades próximas do prazo</div>
+      <div class="card">
+        ${listOrEmpty(upcomingSchool(8), a=>rowGeneric('school', a.title, fmtDate(a.due), null),'school','Nenhuma atividade próxima')}
+      </div>
+    `;
+  } else {
+    el.innerHTML = `
+      <div class="grid grid-4">
+        ${toolCard('calc','Calculadora',"openToolCalc()")}
+        ${toolCard('ruler','Geometria',"openToolGeo()")}
+        ${toolCard('swap','Conversor',"openToolConvert()")}
+        ${toolCard('target','Médias',"openToolAvg()")}
+        ${toolCard('timer','Cronômetro',"openToolTimer()")}
+        ${toolCard('note','Bloco de notas',"openToolNotes()")}
+        ${toolCard('grid9','Tabuada',"openToolTable()")}
+        ${toolCard('type','Contador',"openToolCounter()")}
+      </div>
+    `;
+  }
+}
+function toolCard(ic,label,onclick){
+  return `<div class="card tool-card" onclick="${onclick}"><div class="tool-ic">${icon(ic)}</div><b>${label}</b></div>`;
 }
 function subjectCardHtml(s){
   const avg = subjAvg(s);
@@ -671,21 +908,21 @@ function subjectCardHtml(s){
     <div class="tiny" style="margin-top:10px;">${pendActs} atividade(s) pendente(s)</div>
   </div>`;
 }
-function deleteSubject(id){ confirmDialog('Excluir esta matéria e todos os dados dela?', ()=>{ DATA.subjects = DATA.subjects.filter(s=>s.id!==id); saveData(); renderEscola(); toast('Matéria excluída'); }); }
+function deleteSubject(id){ confirmDialog('Excluir esta matéria e todos os dados dela?', ()=>{ DATA.subjects = DATA.subjects.filter(s=>s.id!==id); saveData(); renderEscolaBody(); toast('Matéria excluída'); }); }
 function openSubjectForm(){
   openModal(`
     <div class="modal-head"><h3>Nova matéria</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
     <div class="field"><label>Nome da matéria</label><input class="input" id="subName" placeholder="Ex: Matemática"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveSubject()">Salvar</button>
+      <button class="btn btn-primary" onclick="saveSubject()">Finalizar</button>
     </div>`);
 }
 function saveSubject(){
   const name = document.getElementById('subName').value.trim();
   if(!name){ toast('Informe o nome','err'); return; }
   DATA.subjects.push({id:uid(), name, grades:[], activities:[], absences:0});
-  saveData(); closeModal(); toast('Matéria adicionada'); renderEscola();
+  saveData(); closeModal(); toast('Matéria adicionada'); renderEscolaBody();
 }
 function openSubjectDetail(id){
   const s = DATA.subjects.find(x=>x.id===id);
@@ -723,15 +960,15 @@ function addGrade(sid){
     <div class="modal-head"><h3>Nova nota</h3><button class="icon-btn" onclick="openSubjectDetail('${sid}')">${icon('x')}</button></div>
     <div class="field"><label>Descrição (ex: Prova 1)</label><input class="input" id="grLabel"></div>
     <div class="field"><label>Nota (0-10)</label><input class="input" id="grValue" type="number" step="0.1" min="0" max="10"></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="openSubjectDetail('${sid}')">Cancelar</button><button class="btn btn-primary" onclick="saveGrade('${sid}')">Salvar</button></div>`);
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="openSubjectDetail('${sid}')">Cancelar</button><button class="btn btn-primary" onclick="saveGrade('${sid}')">Finalizar</button></div>`);
 }
 function saveGrade(sid){
   const label = document.getElementById('grLabel').value.trim()||'Avaliação';
   const value = parseFloat(document.getElementById('grValue').value)||0;
   DATA.subjects.find(x=>x.id===sid).grades.push({id:uid(),label,value});
-  saveData(); toast('Nota adicionada'); openSubjectDetail(sid); renderEscola();
+  saveData(); toast('Nota adicionada'); openSubjectDetail(sid); renderEscolaBody();
 }
-function delGrade(sid,gid){ const s = DATA.subjects.find(x=>x.id===sid); s.grades = s.grades.filter(g=>g.id!==gid); saveData(); openSubjectDetail(sid); renderEscola(); }
+function delGrade(sid,gid){ const s = DATA.subjects.find(x=>x.id===sid); s.grades = s.grades.filter(g=>g.id!==gid); saveData(); openSubjectDetail(sid); renderEscolaBody(); }
 function addActivity(sid){
   openModal(`
     <div class="modal-head"><h3>Nova atividade</h3><button class="icon-btn" onclick="openSubjectDetail('${sid}')">${icon('x')}</button></div>
@@ -740,19 +977,235 @@ function addActivity(sid){
       <div class="field"><label>Tipo</label><select class="select" id="acType"><option>Prova</option><option>Trabalho</option><option>Atividade</option></select></div>
       <div class="field"><label>Entrega</label><input class="input" id="acDue" type="date"></div>
     </div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="openSubjectDetail('${sid}')">Cancelar</button><button class="btn btn-primary" onclick="saveActivity('${sid}')">Salvar</button></div>`);
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="openSubjectDetail('${sid}')">Cancelar</button><button class="btn btn-primary" onclick="saveActivity('${sid}')">Finalizar</button></div>`);
 }
 function saveActivity(sid){
   const title = document.getElementById('acTitle').value.trim();
   if(!title){ toast('Informe o título','err'); return; }
   DATA.subjects.find(x=>x.id===sid).activities.push({id:uid(), title, type:document.getElementById('acType').value, due:document.getElementById('acDue').value, done:false});
-  saveData(); toast('Atividade adicionada'); openSubjectDetail(sid); renderEscola(); renderInicio();
+  saveData(); toast('Atividade adicionada'); openSubjectDetail(sid); renderEscolaBody(); renderInicio();
 }
-function toggleActivity(sid,aid){ const s = DATA.subjects.find(x=>x.id===sid); const a = s.activities.find(x=>x.id===aid); a.done=!a.done; saveData(); openSubjectDetail(sid); renderEscola(); }
-function delActivity(sid,aid){ const s = DATA.subjects.find(x=>x.id===sid); s.activities = s.activities.filter(a=>a.id!==aid); saveData(); openSubjectDetail(sid); renderEscola(); }
+function toggleActivity(sid,aid){ const s = DATA.subjects.find(x=>x.id===sid); const a = s.activities.find(x=>x.id===aid); a.done=!a.done; saveData(); openSubjectDetail(sid); renderEscolaBody(); }
+function delActivity(sid,aid){ const s = DATA.subjects.find(x=>x.id===sid); s.activities = s.activities.filter(a=>a.id!==aid); saveData(); openSubjectDetail(sid); renderEscolaBody(); }
+
+/* ---- Ferramentas escolares ---- */
+function openToolCalc(){
+  openModal(`
+    <div class="modal-head"><h3>Calculadora</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="field"><input class="input" id="calcDisplay" readonly style="text-align:right;font-size:22px;font-family:'Sora';font-weight:700;" value="0"></div>
+    <div class="grid grid-4" style="gap:8px;">
+      ${['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+'].map(k=>`<button class="btn btn-ghost" style="justify-content:center;" onclick="calcPress('${k}')">${k}</button>`).join('')}
+      <button class="btn btn-danger" style="justify-content:center;grid-column:span 2;" onclick="calcPress('C')">C</button>
+      <button class="btn btn-ghost" style="justify-content:center;grid-column:span 2;" onclick="calcPress('%')">%</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Fechar</button></div>
+  `);
+}
+let _calcExpr = '';
+function calcPress(k){
+  const disp = document.getElementById('calcDisplay');
+  if(k==='C'){ _calcExpr=''; disp.value='0'; return; }
+  if(k==='='){
+    try{ _calcExpr = _calcExpr.replace(/%/g,'/100'); disp.value = String(Function('"use strict";return('+_calcExpr+')')()); _calcExpr = disp.value; }
+    catch(e){ disp.value='Erro'; _calcExpr=''; }
+    return;
+  }
+  _calcExpr += k; disp.value = _calcExpr;
+}
+function openToolGeo(){
+  openModal(`
+    <div class="modal-head"><h3>Calculadora de geometria</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="field"><label>Forma</label>
+      <select class="select" id="geoShape" onchange="renderGeoFields()">
+        <option value="quadrado">Quadrado</option><option value="retangulo">Retângulo</option>
+        <option value="triangulo">Triângulo</option><option value="circulo">Círculo</option>
+        <option value="cubo">Cubo (volume)</option><option value="cilindro">Cilindro (volume)</option>
+      </select>
+    </div>
+    <div id="geoFields"></div>
+    <div class="card tight" id="geoResult" style="margin-top:10px;">—</div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Fechar</button></div>
+  `);
+  renderGeoFields();
+}
+function renderGeoFields(){
+  const shape = document.getElementById('geoShape').value;
+  const map = {
+    quadrado:[['lado','Lado']],
+    retangulo:[['b','Base'],['h','Altura']],
+    triangulo:[['b','Base'],['h','Altura']],
+    circulo:[['r','Raio']],
+    cubo:[['a','Aresta']],
+    cilindro:[['r','Raio'],['h','Altura']],
+  };
+  const fields = map[shape];
+  document.getElementById('geoFields').innerHTML = fields.map(([id,lb])=>`<div class="field"><label>${lb}</label><input class="input geoInput" data-k="${id}" type="number" step="0.01" oninput="calcGeo()"></div>`).join('');
+  calcGeo();
+}
+function calcGeo(){
+  const shape = document.getElementById('geoShape').value;
+  const vals = {};
+  document.querySelectorAll('.geoInput').forEach(i=> vals[i.dataset.k] = parseFloat(i.value)||0);
+  let res = '';
+  const PI = Math.PI;
+  if(shape==='quadrado'){ res = `Área: ${(vals.lado**2).toFixed(2)} · Perímetro: ${(vals.lado*4).toFixed(2)}`; }
+  else if(shape==='retangulo'){ res = `Área: ${(vals.b*vals.h).toFixed(2)} · Perímetro: ${(2*(vals.b+vals.h)).toFixed(2)}`; }
+  else if(shape==='triangulo'){ res = `Área: ${(vals.b*vals.h/2).toFixed(2)}`; }
+  else if(shape==='circulo'){ res = `Área: ${(PI*vals.r**2).toFixed(2)} · Perímetro: ${(2*PI*vals.r).toFixed(2)}`; }
+  else if(shape==='cubo'){ res = `Volume: ${(vals.a**3).toFixed(2)}`; }
+  else if(shape==='cilindro'){ res = `Volume: ${(PI*vals.r**2*vals.h).toFixed(2)}`; }
+  document.getElementById('geoResult').textContent = res;
+}
+function openToolConvert(){
+  openModal(`
+    <div class="modal-head"><h3>Conversor de unidades</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="field"><label>Tipo</label>
+      <select class="select" id="convType" onchange="renderConvUnits()">
+        <option value="comprimento">Comprimento</option><option value="massa">Massa</option>
+        <option value="tempo">Tempo</option><option value="area">Área</option><option value="temperatura">Temperatura</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>De</label><select class="select" id="convFrom" onchange="calcConv()"></select></div>
+      <div class="field"><label>Para</label><select class="select" id="convTo" onchange="calcConv()"></select></div>
+    </div>
+    <div class="field"><label>Valor</label><input class="input" id="convValue" type="number" value="1" oninput="calcConv()"></div>
+    <div class="card tight" id="convResult">—</div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Fechar</button></div>
+  `);
+  renderConvUnits();
+}
+const CONV_UNITS = {
+  comprimento:{m:1, km:1000, cm:0.01, mm:0.001, mi:1609.34, ft:0.3048},
+  massa:{kg:1, g:0.001, mg:0.000001, ton:1000, lb:0.453592},
+  tempo:{s:1, min:60, h:3600, dia:86400},
+  area:{'m²':1, 'km²':1000000, 'ha':10000, 'cm²':0.0001},
+};
+function renderConvUnits(){
+  const type = document.getElementById('convType').value;
+  if(type==='temperatura'){
+    document.getElementById('convFrom').innerHTML = '<option>Celsius</option><option>Fahrenheit</option><option>Kelvin</option>';
+    document.getElementById('convTo').innerHTML = '<option>Fahrenheit</option><option>Celsius</option><option>Kelvin</option>';
+  } else {
+    const units = Object.keys(CONV_UNITS[type]);
+    document.getElementById('convFrom').innerHTML = units.map(u=>`<option>${u}</option>`).join('');
+    document.getElementById('convTo').innerHTML = units.map(u=>`<option>${u}</option>`).join('');
+  }
+  calcConv();
+}
+function calcConv(){
+  const type = document.getElementById('convType').value;
+  const from = document.getElementById('convFrom').value, to = document.getElementById('convTo').value;
+  const v = parseFloat(document.getElementById('convValue').value)||0;
+  let res;
+  if(type==='temperatura'){
+    let celsius = from==='Celsius'?v: from==='Fahrenheit'?(v-32)*5/9 : v-273.15;
+    res = to==='Celsius'?celsius: to==='Fahrenheit'?celsius*9/5+32 : celsius+273.15;
+  } else {
+    const base = v * CONV_UNITS[type][from];
+    res = base / CONV_UNITS[type][to];
+  }
+  document.getElementById('convResult').textContent = `${v} ${from} = ${res.toFixed(4)} ${to}`;
+}
+function openToolAvg(){
+  openModal(`
+    <div class="modal-head"><h3>Calculadora de médias</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="field"><label>Notas (separadas por vírgula)</label><input class="input" id="avgNotas" placeholder="Ex: 7, 8.5, 6"></div>
+    <div class="field-row">
+      <div class="field"><label>Média para aprovação</label><input class="input" id="avgAlvo" type="number" value="7" step="0.1"></div>
+      <div class="field"><label>Quantidade total de notas</label><input class="input" id="avgQtd" type="number" value="4"></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="calcAvg()">Calcular</button>
+    <div class="card tight" id="avgResult">—</div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>
+  `);
+}
+function calcAvg(){
+  const notas = document.getElementById('avgNotas').value.split(',').map(s=>parseFloat(s.trim())).filter(n=>!isNaN(n));
+  const alvo = parseFloat(document.getElementById('avgAlvo').value)||7;
+  const qtd = parseInt(document.getElementById('avgQtd').value)||notas.length;
+  if(!notas.length){ document.getElementById('avgResult').textContent='Informe ao menos uma nota'; return; }
+  const media = notas.reduce((a,b)=>a+b,0)/notas.length;
+  const faltam = qtd - notas.length;
+  let msg = `Média atual: ${media.toFixed(2)}`;
+  if(faltam>0){
+    const necessaria = (alvo*qtd - notas.reduce((a,b)=>a+b,0)) / faltam;
+    msg += ` · Precisa tirar ${necessaria.toFixed(2)} nas próximas ${faltam} avaliação(ões) para média ${alvo}`;
+  }
+  document.getElementById('avgResult').textContent = msg;
+}
+function openToolTimer(){
+  openModal(`
+    <div class="modal-head"><h3>Cronômetro de estudos</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div style="text-align:center;font-family:'Sora';font-size:40px;font-weight:800;margin:14px 0;" id="timerDisplay">00:00:00</div>
+    <div class="field-row">
+      <button class="btn btn-primary" style="justify-content:center;" onclick="timerToggle()" id="timerBtn">Iniciar</button>
+      <button class="btn btn-ghost" style="justify-content:center;" onclick="timerReset()">Reiniciar</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Fechar</button></div>
+  `);
+}
+let _timerSec = 0, _timerRunning = false, _timerInt = null;
+function timerToggle(){
+  _timerRunning = !_timerRunning;
+  document.getElementById('timerBtn').textContent = _timerRunning?'Pausar':'Iniciar';
+  if(_timerRunning){ _timerInt = setInterval(()=>{ _timerSec++; updateTimerDisplay(); }, 1000); }
+  else clearInterval(_timerInt);
+}
+function timerReset(){ _timerSec=0; _timerRunning=false; clearInterval(_timerInt); document.getElementById('timerBtn').textContent='Iniciar'; updateTimerDisplay(); }
+function updateTimerDisplay(){
+  const h = String(Math.floor(_timerSec/3600)).padStart(2,'0');
+  const m = String(Math.floor((_timerSec%3600)/60)).padStart(2,'0');
+  const s = String(_timerSec%60).padStart(2,'0');
+  const el = document.getElementById('timerDisplay'); if(el) el.textContent = `${h}:${m}:${s}`;
+}
+function openToolNotes(){
+  openModal(`
+    <div class="modal-head"><h3>Bloco de notas</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <textarea class="input" id="notesArea" rows="10" placeholder="Escreva suas anotações...">${escapeHtml(DATA.notes||'')}</textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNotes()">Salvar</button>
+    </div>
+  `);
+}
+function saveNotes(){ DATA.notes = document.getElementById('notesArea').value; saveData(); closeModal(); toast('Notas salvas'); }
+function openToolTable(){
+  openModal(`
+    <div class="modal-head"><h3>Gerador de tabuada</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <div class="field"><label>Número</label><input class="input" id="tableNum" type="number" value="5" oninput="renderTable()"></div>
+    <div class="card tight" id="tableResult" style="max-height:280px;overflow-y:auto;"></div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Fechar</button></div>
+  `);
+  renderTable();
+}
+function renderTable(){
+  const n = parseInt(document.getElementById('tableNum').value)||0;
+  let html = '';
+  for(let i=1;i<=10;i++) html += `<div class="list-row"><div class="body t1">${n} × ${i} = ${n*i}</div></div>`;
+  document.getElementById('tableResult').innerHTML = html;
+}
+function openToolCounter(){
+  openModal(`
+    <div class="modal-head"><h3>Contador de texto</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    <textarea class="input" id="counterArea" rows="8" placeholder="Cole ou digite seu texto..." oninput="renderCounter()"></textarea>
+    <div class="grid grid-3" style="margin-top:10px;">
+      <div class="card tight" style="text-align:center;"><div class="tiny">Palavras</div><b id="cntWords">0</b></div>
+      <div class="card tight" style="text-align:center;"><div class="tiny">Caracteres</div><b id="cntChars">0</b></div>
+      <div class="card tight" style="text-align:center;"><div class="tiny">Linhas</div><b id="cntLines">0</b></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">Fechar</button></div>
+  `);
+}
+function renderCounter(){
+  const t = document.getElementById('counterArea').value;
+  document.getElementById('cntWords').textContent = t.trim()? t.trim().split(/\s+/).length : 0;
+  document.getElementById('cntChars').textContent = t.length;
+  document.getElementById('cntLines').textContent = t? t.split('\n').length : 0;
+}
 
 /* ================= TAREFAS ================= */
-let taskFilter = {status:'pendentes', priority:'todas', search:''};
+let taskFilter = {status:'pendentes', priority:'todas', category:'todas', search:''};
 let taskSort = 'prioridade';
 function renderTarefas(){
   const el = document.getElementById('view-tarefas');
@@ -760,9 +1213,11 @@ function renderTarefas(){
   if(taskFilter.status==='pendentes') list = list.filter(t=>!t.done);
   else if(taskFilter.status==='concluidas') list = list.filter(t=>t.done);
   if(taskFilter.priority!=='todas') list = list.filter(t=>t.priority===taskFilter.priority);
+  if(taskFilter.category!=='todas') list = list.filter(t=>t.category===taskFilter.category);
   if(taskFilter.search) list = list.filter(t=> t.title.toLowerCase().includes(taskFilter.search.toLowerCase()));
-  const order = {urgente:0,importante:1,normal:2};
-  if(taskSort==='prioridade') list.sort((a,b)=> order[a.priority]-order[b.priority]);
+  const order = {urgente:0,alta:1,media:2,baixa:3};
+  if(taskSort==='prioridade') list.sort((a,b)=> (order[a.priority]??2)-(order[b.priority]??2));
+  else if(taskSort==='horario') list.sort((a,b)=> (a.time||'99:99').localeCompare(b.time||'99:99'));
   else list.sort((a,b)=> (a.date||'9999').localeCompare(b.date||'9999'));
 
   el.innerHTML = `
@@ -771,13 +1226,17 @@ function renderTarefas(){
       <select class="select" style="width:auto" onchange="taskSort=this.value;renderTarefas()">
         <option value="prioridade" ${taskSort==='prioridade'?'selected':''}>Ordenar: Prioridade</option>
         <option value="data" ${taskSort==='data'?'selected':''}>Ordenar: Data</option>
+        <option value="horario" ${taskSort==='horario'?'selected':''}>Ordenar: Horário</option>
       </select>
     </div>
     <div class="chip-row" style="margin-bottom:8px;">
       ${[['pendentes','Pendentes'],['concluidas','Concluídas'],['todas','Todas']].map(([k,l])=>`<div class="chip ${taskFilter.status===k?'active':''}" onclick="taskFilter.status='${k}';renderTarefas()">${l}</div>`).join('')}
     </div>
+    <div class="chip-row" style="margin-bottom:8px;">
+      ${[['todas','Todas categorias'],['escola','Escola'],['trabalho','Trabalho'],['diaadia','Dia a dia'],['outras','Outras']].map(([k,l])=>`<div class="chip ${taskFilter.category===k?'active':''}" onclick="taskFilter.category='${k}';renderTarefas()">${l}</div>`).join('')}
+    </div>
     <div class="chip-row" style="margin-bottom:16px;">
-      ${[['todas','Todas prioridades'],['urgente','🔴 Urgente'],['importante','🟡 Importante'],['normal','🟢 Normal']].map(([k,l])=>`<div class="chip ${taskFilter.priority===k?'active':''}" onclick="taskFilter.priority='${k}';renderTarefas()">${l}</div>`).join('')}
+      ${PRIORITIES.map(p=>`<div class="chip ${taskFilter.priority===p.id?'active':''}" onclick="taskFilter.priority=taskFilter.priority==='${p.id}'?'todas':'${p.id}';renderTarefas()">${p.emoji} ${p.label}</div>`).join('')}
     </div>
     <div class="card">
       ${listOrEmpty(list, taskRow, 'check','Nenhuma tarefa por aqui')}
@@ -785,15 +1244,15 @@ function renderTarefas(){
   `;
 }
 function taskRow(t){
-  const pillMap = {urgente:'pill-urgente',importante:'pill-importante',normal:'pill-normal'};
+  const pi = prioInfo(t.priority);
   const overdue = !t.done && t.date && daysUntil(t.date)<0;
   return `<div class="list-row">
     <div class="check-circle ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${icon('check')}</div>
     <div class="body">
       <div class="t1 ${t.done?'strike':''}">${escapeHtml(t.title)}</div>
-      <div class="t2">${t.date?fmtDate(t.date):''}${t.time?' · '+t.time:''}${overdue?' · <span style="color:var(--danger)">atrasada</span>':''}${t.category?' · '+escapeHtml(t.category):''}</div>
+      <div class="t2">${taskCatLabel(t.category)}${t.date?' · '+fmtDate(t.date):''}${t.time?' · '+t.time:''}${overdue?' · <span style="color:var(--danger)">atrasada</span>':''}</div>
     </div>
-    <span class="badge-pill ${pillMap[t.priority]}">${({urgente:'🔴 Urgente',importante:'🟡 Importante',normal:'🟢 Normal'})[t.priority]}</span>
+    <span class="badge-pill pill-${t.priority}">${pi.emoji} ${pi.label}</span>
     <div class="actions">
       <button class="icon-btn btn-sm" onclick="openTaskForm('${t.id}')">${icon('edit')}</button>
       <button class="icon-btn btn-sm" onclick="deleteTask('${t.id}')">${icon('trash')}</button>
@@ -806,39 +1265,34 @@ function openTaskForm(id){
   const t = id? DATA.tasks.find(x=>x.id===id): null;
   openModal(`
     <div class="modal-head"><h3>${t?'Editar':'Nova'} tarefa</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
-    <div class="field"><label>Título</label><input class="input" id="tkTitle" value="${t?escapeHtml(t.title):''}"></div>
-    <div class="field"><label>Descrição</label><textarea class="input" id="tkDesc" rows="2">${t?escapeHtml(t.desc||''):''}</textarea></div>
-    <div class="field-row">
-      <div class="field"><label>Categoria</label><input class="input" id="tkCat" value="${t?escapeHtml(t.category||''):''}" placeholder="Ex: Pessoal"></div>
-      <div class="field"><label>Prazo</label><input class="input" id="tkDeadline" type="date" value="${t?t.deadline||'':''}"></div>
+    <div class="field"><label>Categoria</label>
+      <select class="select" id="tkCat">${TASK_CATS.map(c=>`<option value="${c.id}" ${t&&t.category===c.id?'selected':''}>${c.label}</option>`).join('')}</select>
     </div>
+    <div class="field"><label>Descrição da tarefa</label><input class="input" id="tkTitle" value="${t?escapeHtml(t.title):''}"></div>
     <div class="field-row">
       <div class="field"><label>Data</label><input class="input" id="tkDate" type="date" value="${t?t.date||'':todayISO()}"></div>
       <div class="field"><label>Horário</label><input class="input" id="tkTime" type="time" value="${t?t.time||'':''}"></div>
     </div>
     <div class="field"><label>Prioridade</label>
       <div class="priority-pick">
-        <div class="p-opt" data-p="urgente" onclick="pickPriority('urgente')">🔴 Urgente</div>
-        <div class="p-opt" data-p="importante" onclick="pickPriority('importante')">🟡 Importante</div>
-        <div class="p-opt" data-p="normal" onclick="pickPriority('normal')">🟢 Normal</div>
+        ${PRIORITIES.map(p=>`<div class="p-opt" data-p="${p.id}" onclick="pickPriority('${p.id}')">${p.emoji} ${p.label}</div>`).join('')}
       </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveTask(${t?`'${t.id}'`:'null'})">Salvar</button>
+      <button class="btn btn-primary" onclick="saveTask(${t?`'${t.id}'`:'null'})">Finalizar</button>
     </div>
   `);
-  pickPriority(t?t.priority:'normal');
+  pickPriority(t?t.priority:'media');
 }
 function pickPriority(p){ _taskPriority=p; document.querySelectorAll('.p-opt').forEach(el=> el.classList.toggle('sel', el.dataset.p===p)); }
-let _taskPriority='normal';
+let _taskPriority='media';
 function saveTask(id){
   const title = document.getElementById('tkTitle').value.trim();
-  if(!title){ toast('Informe o título','err'); return; }
+  if(!title){ toast('Informe a descrição da tarefa','err'); return; }
   const obj = {
-    title, desc:document.getElementById('tkDesc').value.trim(),
-    category:document.getElementById('tkCat').value.trim(),
-    deadline:document.getElementById('tkDeadline').value,
+    title,
+    category:document.getElementById('tkCat').value,
     date:document.getElementById('tkDate').value,
     time:document.getElementById('tkTime').value,
     priority:_taskPriority,
@@ -902,7 +1356,7 @@ function openRoutineForm(id){
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveRoutine(${r?`'${r.id}'`:'null'})">Salvar</button>
+      <button class="btn btn-primary" onclick="saveRoutine(${r?`'${r.id}'`:'null'})">Finalizar</button>
     </div>`);
 }
 function toggleRoutineDay(i){
@@ -927,26 +1381,24 @@ function renderCalendario(){
   el.innerHTML = `
     <div class="section-toolbar">
       <div class="chip-row">
-        ${['dia','semana','mes'].map(v=>`<div class="chip ${calView===v?'active':''}" onclick="setCalView('${v}')">${v==='mes'?'Mês':v==='semana'?'Semana':'Dia'}</div>`).join('')}
+        ${['semana','mes'].map(v=>`<div class="chip ${calView===v?'active':''}" onclick="setCalView('${v}')">${v==='mes'?'Mensal':'Semanal'}</div>`).join('')}
       </div>
       <div class="spacer"></div>
       <button class="icon-btn" onclick="calNav(-1)">${icon('chevron')}</button>
       <div style="font-weight:700;font-size:13.5px;min-width:150px;text-align:center;text-transform:capitalize;">${calLabel()}</div>
       <button class="icon-btn" onclick="calNav(1)" style="transform:scaleX(-1)">${icon('chevron')}</button>
     </div>
-    <div class="card">${calView==='mes'?monthGridHtml():calView==='semana'?weekListHtml():dayListHtml()}</div>
+    <div class="card">${calView==='mes'?monthGridHtml():weekListHtml()}</div>
   `;
 }
 function setCalView(v){ calView=v; renderCalendario(); }
 function calNav(dir){
   if(calView==='mes') calDate.setMonth(calDate.getMonth()+dir);
-  else if(calView==='semana') calDate.setDate(calDate.getDate()+7*dir);
-  else calDate.setDate(calDate.getDate()+dir);
+  else calDate.setDate(calDate.getDate()+7*dir);
   renderCalendario();
 }
 function calLabel(){
   if(calView==='mes') return calDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  if(calView==='dia') return calDate.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'short'});
   const start = new Date(calDate); start.setDate(start.getDate()-start.getDay());
   const end = new Date(start); end.setDate(end.getDate()+6);
   return start.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' – '+end.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
@@ -954,7 +1406,7 @@ function calLabel(){
 function allCalItems(){
   const items = [];
   DATA.tasks.forEach(t=> t.date && items.push({date:t.date, title:t.title, icon:'check', type:'Tarefa'}));
-  DATA.events.forEach(e=> items.push({date:e.date, title:e.title, icon:'pin', type:'Evento'}));
+  DATA.events.forEach(e=> items.push({id:e.id, date:e.date, title:e.title, icon:'pin', type:'Evento', isEvent:true}));
   DATA.jobs.forEach(j=> j.deadline && items.push({date:j.deadline, title:j.name, icon:'briefcase', type:'Trabalho'}));
   DATA.subjects.forEach(s=> (s.activities||[]).forEach(a=> a.due && items.push({date:a.due, title:a.title+' · '+s.name, icon:'school', type:'Escola'})));
   DATA.fixedExpenses.forEach(f=> items.push({date: currentMonthKey()+'-'+String(f.dueDay).padStart(2,'0'), title:'Conta: '+f.desc, icon:'wallet', type:'Conta'}));
@@ -973,7 +1425,7 @@ function monthGridHtml(){
     const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dayItems = items.filter(it=>it.date===dateStr);
     const isToday = dateStr===todayStr;
-    cells += `<div style="min-height:70px;border-radius:10px;padding:6px;background:${isToday?'var(--surface-strong)':'transparent'};border:1px solid ${isToday?'var(--c-accent)':'transparent'};">
+    cells += `<div class="cal-day" style="min-height:70px;border-radius:10px;padding:6px;cursor:pointer;background:${isToday?'var(--surface-strong)':'transparent'};border:1px solid ${isToday?'var(--c-accent)':'transparent'};" onclick="openDayDetail('${dateStr}')">
       <div style="font-size:11.5px;font-weight:${isToday?'800':'600'};color:${isToday?'var(--c-warm)':'var(--text-2)'};margin-bottom:4px;">${d}</div>
       ${dayItems.slice(0,2).map(it=>`<div style="font-size:9.8px;background:var(--surface);border-radius:5px;padding:2px 4px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${escapeHtml(it.title)}</div>`).join('')}
       ${dayItems.length>2?`<div style="font-size:9px;color:var(--text-3);">+${dayItems.length-2}</div>`:''}
@@ -994,32 +1446,47 @@ function weekListHtml(){
     const d = new Date(start); d.setDate(d.getDate()+i);
     const dateStr = d.toISOString().slice(0,10);
     const dayItems = items.filter(it=>it.date===dateStr);
-    html += `<div class="section-title" style="margin:14px 0 6px;text-transform:capitalize;">${d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'short'})}</div>`;
+    html += `<div class="section-title" style="margin:14px 0 6px;text-transform:capitalize;cursor:pointer;" onclick="openDayDetail('${dateStr}')">${d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'short'})}</div>`;
     html += dayItems.length? dayItems.map(it=>rowGeneric(it.icon,it.title,it.type,null)).join('') : `<div class="tiny" style="padding:6px 4px;">Nada agendado</div>`;
   }
   return html;
 }
-function dayListHtml(){
-  const items = allCalItems().filter(it=> it.date === calDate.toISOString().slice(0,10));
-  return listOrEmpty(items, it=>rowGeneric(it.icon,it.title,it.type,null),'calendar','Nada agendado para este dia');
+function openDayDetail(dateStr){
+  const items = allCalItems().filter(it=>it.date===dateStr);
+  openModal(`
+    <div class="modal-head"><h3>${fmtDateFull(dateStr)}</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
+    ${listOrEmpty(items, it=>rowGeneric(it.icon,it.title,it.type,null),'calendar','Nada agendado para este dia')}
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal();openEventForm('${dateStr}')">${icon('plus')}Novo compromisso</button></div>
+  `);
 }
-function openEventForm(){
+function openEventForm(prefDate){
   openModal(`
     <div class="modal-head"><h3>Novo compromisso</h3><button class="icon-btn" onclick="closeModal()">${icon('x')}</button></div>
-    <div class="field"><label>Título</label><input class="input" id="evTitle" placeholder="Ex: Reunião, consulta..."></div>
+    <div class="field"><label>Nome</label><input class="input" id="evTitle" placeholder="Ex: Reunião, consulta..."></div>
+    <div class="field"><label>Categoria</label>
+      <select class="select" id="evCat">${TASK_CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+    </div>
     <div class="field-row">
-      <div class="field"><label>Data</label><input class="input" id="evDate" type="date" value="${todayISO()}"></div>
+      <div class="field"><label>Data</label><input class="input" id="evDate" type="date" value="${prefDate||todayISO()}"></div>
       <div class="field"><label>Horário</label><input class="input" id="evTime" type="time"></div>
     </div>
+    <div class="field"><label>Lembrete</label>
+      <select class="select" id="evReminder"><option value="0">No horário</option><option value="30">30 min antes</option><option value="60">1 hora antes</option><option value="1440">1 dia antes</option></select>
+    </div>
+    <div class="field"><label>Observação</label><textarea class="input" id="evNotes" rows="2"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveEvent()">Salvar</button>
+      <button class="btn btn-primary" onclick="saveEvent()">Finalizar</button>
     </div>`);
 }
 function saveEvent(){
   const title = document.getElementById('evTitle').value.trim();
-  if(!title){ toast('Informe o título','err'); return; }
-  DATA.events.push({id:uid(), title, date:document.getElementById('evDate').value, time:document.getElementById('evTime').value});
+  if(!title){ toast('Informe o nome','err'); return; }
+  DATA.events.push({
+    id:uid(), title, category:document.getElementById('evCat').value,
+    date:document.getElementById('evDate').value, time:document.getElementById('evTime').value,
+    reminder:document.getElementById('evReminder').value, notes:document.getElementById('evNotes').value.trim()
+  });
   saveData(); closeModal(); toast('Compromisso adicionado'); renderCalendario(); renderInicio();
 }
 
@@ -1065,7 +1532,7 @@ function openGoalForm(id){
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveGoal(${g?`'${g.id}'`:'null'})">Salvar</button>
+      <button class="btn btn-primary" onclick="saveGoal(${g?`'${g.id}'`:'null'})">Finalizar</button>
     </div>`);
 }
 function saveGoal(id){
@@ -1105,9 +1572,9 @@ function renderEstatisticas(){
 
   el.innerHTML = `
     <div class="grid grid-4">
-      ${statCard('arrowUp','Dinheiro ganho', fmtMoney(entradas))}
-      ${statCard('arrowDown','Dinheiro gasto', fmtMoney(saidas))}
-      ${statCard('wallet','Economia do mês', fmtMoney(economia))}
+      ${statCard('arrowUp','Dinheiro ganho', entradas, null, true)}
+      ${statCard('arrowDown','Dinheiro gasto', saidas, null, true)}
+      ${statCard('wallet','Economia do mês', economia, null, true)}
       ${statCard('target','Metas concluídas', metasConcl)}
     </div>
     <div class="grid grid-4" style="margin-top:14px;">
@@ -1117,7 +1584,7 @@ function renderEstatisticas(){
       ${statCard('briefcase','Horas trabalhadas/sem', horasTrabalho.toFixed(1))}
     </div>
     <div class="section-title">Evolução financeira (6 meses)</div>
-    <div class="card">${lineChartSVG(last6,'#935073')}</div>
+    <div class="card">${lineChartSVG(last6,'#E736B0')}</div>
     <div class="section-title">Progresso das metas</div>
     <div class="card">
       ${listOrEmpty(DATA.goals, g=>{
@@ -1162,6 +1629,10 @@ function renderConfig(){
           <div class="theme-opt ${s.theme==='dark'?'sel':''}" onclick="setTheme('dark')"><div class="swatch-preview swatch-dark"></div>Escuro</div>
           <div class="theme-opt ${s.theme==='light'?'sel':''}" onclick="setTheme('light')"><div class="swatch-preview swatch-light"></div>Claro</div>
         </div>
+        <div class="settings-row" style="margin-top:14px;">
+          <div class="l"><b>Animações</b><span>Ativar transições e efeitos visuais</span></div>
+          <div class="switch ${s.animOn!==false?'on':''}" onclick="toggleAnim()"><div class="knob"></div></div>
+        </div>
       </div>
 
       <div class="card">
@@ -1198,6 +1669,12 @@ function initials(name){ return (name||'U').trim().split(' ').map(p=>p[0]).slice
 function updateName(v){ DATA.settings.name = v||'Usuário'; saveData(); refreshChrome(); toast('Nome atualizado'); }
 function updateSetting(k,v){ DATA.settings[k]=v; saveData(); toast('Configuração salva'); if(k==='currency'){renderConfig();} }
 function toggleNotifSetting(){ DATA.settings.notifOn = DATA.settings.notifOn===false; saveData(); renderConfig(); }
+function toggleAnim(){
+  DATA.settings.animOn = DATA.settings.animOn===false;
+  saveData();
+  document.body.classList.toggle('anim-off', DATA.settings.animOn===false);
+  renderConfig();
+}
 function handlePhoto(e){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
@@ -1207,7 +1684,7 @@ function handlePhoto(e){
 function exportData(){
   const blob = new Blob([JSON.stringify(DATA,null,2)], {type:'application/json'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'meu-painel-backup.json'; a.click();
+  a.href = URL.createObjectURL(blob); a.download = 'rotiners-backup.json'; a.click();
   toast('Backup exportado');
 }
 function importData(e){
@@ -1230,24 +1707,48 @@ function renderAll(){ SECTIONS.forEach(s=> renderView(s.id)); }
 function computeNotifications(){
   const days = DATA.settings.notifDays||3;
   const list = [];
-  DATA.tasks.filter(t=>!t.done && t.date).forEach(t=>{ const d = daysUntil(t.date); if(d<=days) list.push({title:t.title, sub:(d<0?'Atrasada':(d===0?'Hoje':'Em '+d+' dia(s)')), icon:'check'}); });
-  DATA.subjects.forEach(s=> (s.activities||[]).forEach(a=>{ if(!a.done && a.due){ const d = daysUntil(a.due); if(d<=days) list.push({title:a.title+' · '+s.name, sub:(d<0?'Atrasada':(d===0?'Hoje':'Em '+d+' dia(s)')), icon:'school'}); } }));
-  DATA.jobs.forEach(j=>{ if(j.deadline && j.status!=='Concluído' && j.status!=='Cancelado'){ const d = daysUntil(j.deadline); if(d<=days) list.push({title:'Prazo: '+j.name, sub:(d<0?'Atrasado':(d===0?'Hoje':'Em '+d+' dia(s)')), icon:'briefcase'}); } });
+  DATA.tasks.filter(t=>!t.done && t.date).forEach(t=>{ const d = daysUntil(t.date); if(d<=days) list.push({id:'task-'+t.id, title:t.title, sub:(d<0?'Atrasada':(d===0?'Hoje':'Em '+d+' dia(s)')), icon:'check'}); });
+  DATA.subjects.forEach(s=> (s.activities||[]).forEach(a=>{ if(!a.done && a.due){ const d = daysUntil(a.due); if(d<=days) list.push({id:'act-'+a.id, title:a.title+' · '+s.name, sub:(d<0?'Atrasada':(d===0?'Hoje':'Em '+d+' dia(s)')), icon:'school'}); } }));
+  DATA.jobs.forEach(j=>{ if(j.deadline && j.status!=='Concluído' && j.status!=='Cancelado'){ const d = daysUntil(j.deadline); if(d<=days) list.push({id:'job-'+j.id, title:'Entrega: '+j.name, sub:(d<0?'Atrasado':(d===0?'Hoje':'Em '+d+' dia(s)')), icon:'briefcase'}); } });
   DATA.fixedExpenses.filter(f=>!f.paid).forEach(f=>{
     const today = new Date().getDate();
-    if(f.dueDay - today <= days) list.push({title:'Conta: '+f.desc, sub:'Vence dia '+f.dueDay, icon:'wallet'});
+    if(f.dueDay - today <= days) list.push({id:'fx-'+f.id, title:'Conta: '+f.desc, sub:'Vence dia '+f.dueDay, icon:'wallet'});
   });
-  DATA.goals.forEach(g=>{ if(g.deadline){ const d = daysUntil(g.deadline); if(d>=0 && d<=days) list.push({title:'Meta: '+g.name, sub:'Prazo em '+d+' dia(s)', icon:'target'}); } });
-  return list;
+  DATA.goals.forEach(g=>{ if(g.deadline){ const d = daysUntil(g.deadline); if(d>=0 && d<=days) list.push({id:'goal-'+g.id, title:'Meta: '+g.name, sub:'Prazo em '+d+' dia(s)', icon:'target'}); } });
+  DATA.events.forEach(e=>{ const d = daysUntil(e.date); if(d>=0 && d<=days) list.push({id:'ev-'+e.id, title:e.title, sub:(d===0?'Hoje':'Em '+d+' dia(s)'), icon:'pin'}); });
+  return list.filter(n=> !(DATA.notifState.deleted||[]).includes(n.id));
 }
 function toggleNotif(){
   const p = document.getElementById('notifPanel');
   if(p.classList.contains('open')) return closeNotif();
-  const items = computeNotifications();
-  document.getElementById('notifList').innerHTML = items.length? items.map(n=>`
-    <div class="notif-item"><div class="ic">${icon(n.icon)}</div><div><b>${escapeHtml(n.title)}</b><span>${n.sub}</span></div></div>
-  `).join('') : `<div class="empty" style="padding:24px 10px;">${icon('bell')}<p>Nenhuma notificação no momento</p></div>`;
+  renderNotifList();
   p.classList.add('open');
+}
+function renderNotifList(){
+  const items = computeNotifications();
+  document.getElementById('notifList').innerHTML = items.length? items.map(n=>{
+    const read = (DATA.notifState.read||[]).includes(n.id);
+    return `<div class="notif-item ${read?'':'unread'}">
+      <div class="ic">${icon(n.icon)}</div>
+      <div class="body" onclick="markNotifRead('${n.id}')"><b>${escapeHtml(n.title)}</b><span>${n.sub}</span></div>
+      <button class="icon-btn btn-sm del" onclick="deleteNotif('${n.id}')">${icon('x')}</button>
+    </div>`;
+  }).join('') : `<div class="empty" style="padding:24px 10px;">${icon('bell')}<p>Nenhuma notificação no momento</p></div>`;
+}
+function markNotifRead(id){
+  if(!DATA.notifState.read) DATA.notifState.read=[];
+  if(!DATA.notifState.read.includes(id)) DATA.notifState.read.push(id);
+  saveData(); renderNotifList(); updateNotifBadge();
+}
+function markAllNotifsRead(){
+  const items = computeNotifications();
+  DATA.notifState.read = items.map(n=>n.id);
+  saveData(); renderNotifList(); updateNotifBadge(); toast('Todas marcadas como lidas');
+}
+function deleteNotif(id){
+  if(!DATA.notifState.deleted) DATA.notifState.deleted=[];
+  DATA.notifState.deleted.push(id);
+  saveData(); renderNotifList(); updateNotifBadge();
 }
 function closeNotif(){ document.getElementById('notifPanel').classList.remove('open'); }
 document.addEventListener('click', (e)=>{
@@ -1255,9 +1756,10 @@ document.addEventListener('click', (e)=>{
   if(p.classList.contains('open') && !p.contains(e.target) && e.target!==b && !b.contains(e.target)) closeNotif();
 });
 function updateNotifBadge(){
-  const n = computeNotifications().length;
+  const items = computeNotifications();
+  const unread = items.filter(n=> !(DATA.notifState.read||[]).includes(n.id)).length;
   const btn = document.getElementById('notifBtn');
-  btn.innerHTML = icon('bell') + (n? `<span class="badge">${n>9?'9+':n}</span>`:'');
+  btn.innerHTML = icon('bell') + (unread? `<span class="badge">${unread>9?'9+':unread}</span>`:'');
 }
 
 /* ================= THEME / CHROME ================= */
@@ -1283,6 +1785,7 @@ function escapeHtml(str){
 /* ================= INIT ================= */
 function init(){
   document.documentElement.setAttribute('data-theme', DATA.settings.theme||'dark');
+  if(DATA.settings.animOn===false) document.body.classList.add('anim-off');
   buildNav();
   buildViews();
   refreshChrome();
