@@ -56,8 +56,41 @@ const ICONS = {
   camera:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.4"/>'
 };
 function icon(name, cls){
-  return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;
+  return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`;
 }
+/* Tons de cor (duas cores em degradê) por categoria — deixa os ícones mais "ilustrados" e variados */
+const TONES = {
+  escola:      {a:'#9B5CF2', b:'#5B1F9E'},
+  trabalho:    {a:'#4FA7F0', b:'#1C4E9E'},
+  diaadia:     {a:'#FF6FD8', b:'#C21F8E'},
+  outras:      {a:'#5fe3a8', b:'#1C8A5C'},
+  alimentacao: {a:'#FFB45C', b:'#C2630C'},
+  lazer:       {a:'#FF6FD8', b:'#A11F8E'},
+  roupas:      {a:'#9B5CF2', b:'#4E1F8E'},
+  transporte:  {a:'#4FC3F0', b:'#1C6E9E'},
+  casa:        {a:'#5fe3a8', b:'#167A51'},
+  outros:      {a:'#c9a0ff', b:'#5B1F9E'},
+  saldo:       {a:'#5fe3a8', b:'#167A51'},
+  entradas:    {a:'#6FE3C4', b:'#0E8A6E'},
+  gastos:      {a:'#FF8577', b:'#C23B2E'},
+  tarefas:     {a:'#FF6FD8', b:'#A11F8E'},
+};
+function toneStyle(key){ const t = TONES[key]; return t? `style="--ic-a:${t.a};--ic-b:${t.b}"` : ''; }
+
+/* Ripple de clique — vivo e leve, sem dependências */
+document.addEventListener('pointerdown', (e)=>{
+  const host = e.target.closest('.btn,.chip,.nav-item,.bn-item,.icon-btn,.fab,.check-circle,.tool-card,.subject-card');
+  if(!host) return;
+  const r = host.getBoundingClientRect();
+  const size = Math.max(r.width, r.height);
+  const span = document.createElement('span');
+  span.className = 'ripple-el';
+  span.style.width = span.style.height = size+'px';
+  span.style.left = (e.clientX - r.left - size/2)+'px';
+  span.style.top = (e.clientY - r.top - size/2)+'px';
+  host.appendChild(span);
+  setTimeout(()=> span.remove(), 600);
+});
 document.querySelector('.brand .mark').innerHTML = icon('logo');
 
 /* ---------- DATA LAYER ---------- */
@@ -322,10 +355,10 @@ function renderInicio(){
     </div>` : ''}
 
     <div class="grid grid-4">
-      ${statCard('wallet','Saldo disponível', bal, null, true, 'cuSaldo')}
-      ${statCard('arrowUp','Entradas do mês', entradas, null, true, 'cuEntradas')}
-      ${statCard('arrowDown','Gastos do mês', saidas, null, true, 'cuGastos')}
-      ${statCard('check','Tarefas pendentes', pendTasks.length, null, false, 'cuTarefas')}
+      ${statCard('wallet','Saldo disponível', bal, null, true, 'cuSaldo', 'saldo')}
+      ${statCard('arrowUp','Entradas do mês', entradas, null, true, 'cuEntradas', 'entradas')}
+      ${statCard('arrowDown','Gastos do mês', saidas, null, true, 'cuGastos', 'gastos')}
+      ${statCard('check','Tarefas pendentes', pendTasks.length, null, false, 'cuTarefas', 'tarefas')}
     </div>
 
     <div class="section-title">Tarefas pendentes</div>
@@ -394,16 +427,17 @@ function inicioPendingTasks(){
   return list.slice(0,6);
 }
 let finResumoRange = 'mes';
-function statCard(ic,label,value,delta,isMoney,cuId){
+function statCard(ic,label,value,delta,isMoney,cuId,tone){
   return `<div class="card stat">
-    <div class="top"><div class="ic">${icon(ic)}</div></div>
+    <div class="top"><div class="ic" ${toneStyle(tone)}>${icon(ic)}</div></div>
     <div class="label">${label}</div>
     <div class="value" id="${cuId||''}">${isMoney?fmtMoney(value):value}</div>
   </div>`;
 }
-function rowGeneric(ic,title,sub,end){
+const ROW_ICON_TONE = {check:'tarefas', pin:'diaadia', briefcase:'trabalho', school:'escola', wallet:'saldo', target:'outros', bell:'diaadia'};
+function rowGeneric(ic,title,sub,end,tone){
   return `<div class="list-row">
-    <div class="lead-ic">${icon(ic)}</div>
+    <div class="lead-ic" ${toneStyle(tone||ROW_ICON_TONE[ic])}>${icon(ic)}</div>
     <div class="body"><div class="t1">${escapeHtml(title)}</div><div class="t2">${escapeHtml(sub||'')}</div></div>
     ${end?`<div class="end"><div class="amt">${end}</div></div>`:''}
   </div>`;
@@ -545,7 +579,7 @@ function renderDinheiro(){
       <div class="card-head"><h3>Contas a pagar e pagas</h3><button class="btn btn-sm btn-ghost" onclick="openFixedForm()">${icon('plus')}Nova conta</button></div>
       ${listOrEmpty([...unpaid,...paid], f=>`
         <div class="list-row">
-          <div class="lead-ic">${icon(catInfo(f.category).icon)}</div>
+          <div class="lead-ic" ${toneStyle(f.category)}>${icon(catInfo(f.category).icon)}</div>
           <div class="body"><div class="t1">${escapeHtml(f.desc)}</div><div class="t2">Todo dia ${f.dueDay} · ${catInfo(f.category).label}</div></div>
           <div class="end">
             <span class="badge-pill ${f.paid?'pill-concluido':'pill-pendente'}">${f.paid?'Paga':'Pendente'}</span>
@@ -567,7 +601,7 @@ function renderDinheiro(){
     <div class="card">
       ${listOrEmpty(txList, t=>`
         <div class="list-row">
-          <div class="lead-ic">${icon(catInfo(t.category).icon)}</div>
+          <div class="lead-ic" ${toneStyle(t.category)}>${icon(catInfo(t.category).icon)}</div>
           <div class="body"><div class="t1">${escapeHtml(t.desc)}</div><div class="t2">${fmtDate(t.date)} · ${catInfo(t.category).label} · ${escapeHtml(t.method||'')}</div></div>
           <div class="end"><div class="amt" style="color:${t.type==='entrada'?'var(--success)':'var(--danger)'}">${t.type==='entrada'?'+':'-'} ${fmtMoney(t.value)}</div></div>
           <div class="actions">
@@ -877,20 +911,20 @@ function renderEscolaBody(){
   } else {
     el.innerHTML = `
       <div class="grid grid-4">
-        ${toolCard('calc','Calculadora',"openToolCalc()")}
-        ${toolCard('ruler','Geometria',"openToolGeo()")}
-        ${toolCard('swap','Conversor',"openToolConvert()")}
-        ${toolCard('target','Médias',"openToolAvg()")}
-        ${toolCard('timer','Cronômetro',"openToolTimer()")}
-        ${toolCard('note','Bloco de notas',"openToolNotes()")}
-        ${toolCard('grid9','Tabuada',"openToolTable()")}
-        ${toolCard('type','Contador',"openToolCounter()")}
+        ${toolCard('calc','Calculadora',"openToolCalc()",'escola')}
+        ${toolCard('ruler','Geometria',"openToolGeo()",'roupas')}
+        ${toolCard('swap','Conversor',"openToolConvert()",'transporte')}
+        ${toolCard('target','Médias',"openToolAvg()",'diaadia')}
+        ${toolCard('timer','Cronômetro',"openToolTimer()",'alimentacao')}
+        ${toolCard('note','Bloco de notas',"openToolNotes()",'casa')}
+        ${toolCard('grid9','Tabuada',"openToolTable()",'trabalho')}
+        ${toolCard('type','Contador',"openToolCounter()",'outros')}
       </div>
     `;
   }
 }
-function toolCard(ic,label,onclick){
-  return `<div class="card tool-card" onclick="${onclick}"><div class="tool-ic">${icon(ic)}</div><b>${label}</b></div>`;
+function toolCard(ic,label,onclick,tone){
+  return `<div class="card tool-card" onclick="${onclick}"><div class="tool-ic" ${toneStyle(tone)}>${icon(ic)}</div><b>${label}</b></div>`;
 }
 function subjectCardHtml(s){
   const avg = subjAvg(s);
@@ -1243,11 +1277,13 @@ function renderTarefas(){
     </div>
   `;
 }
+const TASK_CAT_ICON = {escola:'school', trabalho:'work2', diaadia:'home2', outras:'more'};
 function taskRow(t){
   const pi = prioInfo(t.priority);
   const overdue = !t.done && t.date && daysUntil(t.date)<0;
   return `<div class="list-row">
     <div class="check-circle ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${icon('check')}</div>
+    <div class="lead-ic" ${toneStyle(t.category)}>${icon(TASK_CAT_ICON[t.category]||'more')}</div>
     <div class="body">
       <div class="t1 ${t.done?'strike':''}">${escapeHtml(t.title)}</div>
       <div class="t2">${taskCatLabel(t.category)}${t.date?' · '+fmtDate(t.date):''}${t.time?' · '+t.time:''}${overdue?' · <span style="color:var(--danger)">atrasada</span>':''}</div>
@@ -1729,7 +1765,7 @@ function renderNotifList(){
   document.getElementById('notifList').innerHTML = items.length? items.map(n=>{
     const read = (DATA.notifState.read||[]).includes(n.id);
     return `<div class="notif-item ${read?'':'unread'}">
-      <div class="ic">${icon(n.icon)}</div>
+      <div class="ic" ${toneStyle(ROW_ICON_TONE[n.icon])}>${icon(n.icon)}</div>
       <div class="body" onclick="markNotifRead('${n.id}')"><b>${escapeHtml(n.title)}</b><span>${n.sub}</span></div>
       <button class="icon-btn btn-sm del" onclick="deleteNotif('${n.id}')">${icon('x')}</button>
     </div>`;
