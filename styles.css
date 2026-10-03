@@ -492,10 +492,17 @@ button, a, .nav-item, .icon-btn, .btn, .card, .chip, .subject-card,
   to { opacity: 1; }
 }
 
-/* Fundo com profundidade estática (sem pan infinito — mais sóbrio e leve) */
+/* Fundo com leve respiração de gradiente — mais vivo, sem pesar */
 body {
-  background-size: 130% 130%;
-  background-position: 12% 0%;
+  background-size: 160% 160%;
+  animation: bgDrift 22s ease-in-out infinite alternate;
+}
+@keyframes bgDrift {
+  from { background-position: 8% 0%; }
+  to   { background-position: 30% 18%; }
+}
+@media (prefers-reduced-motion: reduce){
+  body{ animation:none; background-position:12% 0%; }
 }
 
 /* Marca/logo: brilho fixo e sutil, sem flutuação contínua */
@@ -510,15 +517,21 @@ body {
   inset: -4px;
   border-radius: 14px;
   background: var(--accent-grad);
-  opacity: .2;
+  opacity: .28;
   filter: blur(9px);
   z-index: -1;
   transition: opacity .3s var(--ease), transform .3s var(--ease);
+  animation: markPulse 2.6s ease-in-out infinite;
 }
 
 .brand:hover .mark::after {
-  opacity: .4;
-  transform: scale(1.12);
+  opacity: .55;
+  transform: scale(1.18);
+}
+
+@keyframes markPulse {
+  0%, 100% { opacity:.22; transform:scale(1); }
+  50% { opacity:.42; transform:scale(1.08); }
 }
 
 /* Menu lateral */
@@ -598,9 +611,15 @@ body {
 
 .card:hover,
 .subject-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255,143,224,.2);
-  box-shadow: 0 18px 40px rgba(5,2,10,.26), 0 0 0 1px rgba(255,143,224,.05) inset;
+  transform: translateY(-6px) rotate(-.3deg);
+  border-color: rgba(255,143,224,.28);
+  box-shadow: 0 20px 44px rgba(5,2,10,.32), 0 0 18px rgba(199,66,255,.1), 0 0 0 1px rgba(255,143,224,.06) inset;
+}
+.tool-card:hover{
+  transform: translateY(-6px) scale(1.02);
+}
+.tool-card:hover .tool-ic{
+  transform: scale(1.12) rotate(6deg);
 }
 
 /* Hero com brilho em movimento */
@@ -698,15 +717,41 @@ textarea.input:focus,
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255,255,255,.32),
+    rgba(255,255,255,.4),
     transparent
   );
   transform: translateX(-100%);
-  animation: progressShine .9s var(--ease) .3s 1 both;
+  animation: progressShine 2.4s var(--ease) .3s infinite;
 }
 
 @keyframes progressShine {
   to { transform: translateX(100%); }
+}
+
+.chip.active{ animation: chipGlow 2.2s ease-in-out infinite; }
+@keyframes chipGlow {
+  0%,100% { box-shadow:0 7px 18px rgba(231,54,176,.25); }
+  50% { box-shadow:0 7px 22px rgba(199,66,255,.45); }
+}
+@media (prefers-reduced-motion: reduce){ .prog-fill::after, .chip.active{ animation:none !important; } }
+
+/* Ripple de clique — feedback visual vivo em botões/chips/nav */
+.btn, .chip, .nav-item, .bn-item, .icon-btn, .fab, .check-circle, .tool-card, .card.subject-card {
+  position: relative;
+  isolation: isolate;
+}
+.ripple-el {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.45);
+  transform: scale(0);
+  animation: rippleAnim .55s ease-out forwards;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 5;
+}
+@keyframes rippleAnim {
+  to { transform: scale(2.6); opacity: 0; }
 }
 
 /* FAB */
@@ -719,12 +764,35 @@ textarea.input:focus,
 
 .fab:hover {
   transform: translateY(-3px) scale(1.06);
-  box-shadow: 0 14px 32px rgba(231,54,176,.55);
+  box-shadow: 0 14px 32px rgba(231,54,176,.6);
   filter: brightness(1.08);
 }
 
 .fab:active {
   transform: scale(.93);
+}
+
+.fab{ animation: fabBreathe 3.2s ease-in-out infinite; }
+.fab:hover{ animation-play-state: paused; }
+@keyframes fabBreathe {
+  0%,100% { box-shadow:0 10px 24px rgba(231,54,176,.45); }
+  50% { box-shadow:0 10px 30px rgba(231,54,176,.4), 0 0 22px rgba(199,66,255,.45); }
+}
+
+.nav-item.active .dot{ animation: dotPulse 1.8s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%,100% { box-shadow:0 0 6px rgba(255,143,224,.7); transform:scale(1); }
+  50% { box-shadow:0 0 12px rgba(255,143,224,1); transform:scale(1.2); }
+}
+
+.icon-btn .badge{ animation: badgePulse 1.6s ease-in-out infinite; }
+@keyframes badgePulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(255,107,129,.55); }
+  50% { box-shadow:0 0 0 4px rgba(255,107,129,0); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .fab, .nav-item.active .dot, .icon-btn .badge, .brand .mark::after { animation:none !important; }
 }
 
 /* Notificações */
@@ -1333,12 +1401,27 @@ h1, h2, h3, p, span, b, strong {
   overflow: hidden;
   background:
     radial-gradient(120% 130% at 28% 18%, var(--icon-tint-1), transparent 55%),
-    linear-gradient(155deg, var(--icon-tint-2), var(--icon-tint-3) 80%);
+    linear-gradient(155deg, var(--ic-a, var(--icon-tint-2)), var(--ic-b, var(--icon-tint-3)) 80%);
   border: 1px solid var(--icon-border);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.10),
-    inset 0 -8px 12px rgba(0,0,0,.16),
-    0 4px 12px rgba(5,2,10,.22);
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -8px 12px rgba(0,0,0,.18),
+    0 4px 14px rgba(5,2,10,.28),
+    0 0 0 1px rgba(255,255,255,.02);
+}
+/* brilho glossy — meia-lua especular no topo, dá aspecto "ilustrado" */
+.icon-btn::before,
+.stat .ic::before,
+.list-row .lead-ic::before,
+.next-up .ic::before,
+.notif-item .ic::before,
+.tool-card .tool-ic::before,
+.brand .mark::before {
+  content:"";
+  position:absolute; inset:0;
+  background: radial-gradient(60% 45% at 50% 0%, rgba(255,255,255,.35), transparent 70%);
+  mix-blend-mode: overlay;
+  pointer-events:none;
 }
 
 .icon-btn svg,
